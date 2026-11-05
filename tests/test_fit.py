@@ -1,11 +1,11 @@
 """Maximum likelihood on synthetic series of known parameters: recovery, fixed parameters, shared shock sizes, the
-correlation rule, one factor against least squares."""
+correlation rule, one factor against least squares, a fixed half-life and the likelihood ratio of nested fits."""
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from gaspaths import ModelSpec, Params, fit, ou, simulate_factors
+from gaspaths import ModelSpec, Params, fit, fixed_half_life, likelihood_ratio, ou, simulate_factors
 
 DT = 1.0 / 365.25
 
@@ -141,3 +141,55 @@ def test_a_warm_start_is_tried_and_kept_when_best(recovered):
     with pytest.raises(ValueError):
         fit(p.spec, y, np.arange(3000), fixed={"rho": p.rho}, starts=1,
             start=cold.params.replace(spec=ModelSpec(factors=2, harmonics=1, drivers=("wind",)), beta=[[0.0]]))
+
+
+def _two_regimes() -> Params:
+    spec = ModelSpec(factors=2, harmonics=2, regimes=("normal", "stressed"), drivers=("wind", "demand"))
+    return Params(spec=spec, mu=4.3, kappa=[90.0, np.log(2) / 0.6], sigma=np.array([[1.1, 0.9], [3.0, 1.4]]),
+                  rho=0.0, seasonal=[0.1, 0.05, 0.0, 0.0], beta=np.array([[-0.007, 0.018], [-0.07, 0.01]]),
+                  sigma_obs=0.01)
+
+
+def test_fixed_half_life_keeps_the_long_run_spread():
+    p = _two_regimes()
+    fx = fixed_half_life(p, 4.0)
+    k = np.log(2) / 4.0
+    assert np.isnan(fx["kappa"][0]) and np.isclose(fx["kappa"][1], k)
+    for g in range(2):
+        sd = p.sigma[g, 1] / np.sqrt(2 * p.kappa[1])
+        assert np.isclose(fx["sigma"][g][1] / np.sqrt(2 * k), sd) and np.isnan(fx["sigma"][g][0])
+    only = fixed_half_life(p, 4.0, factor=0, keep_spread=False)
+    assert set(only) == {"kappa"} and np.isclose(only["kappa"][0], k) and np.isnan(only["kappa"][1])
+
+
+def test_fixed_half_life_refuses_what_it_cannot_hold():
+    p = _two_regimes()
+    with pytest.raises(ValueError):
+        fixed_half_life(p, 0.0)
+    with pytest.raises(ValueError):
+        fixed_half_life(p, 1.0, factor=2)
+    walk = p.replace(kappa=np.array([90.0, 0.0]))
+    with pytest.raises(ValueError, match="random-walk"):
+        fixed_half_life(walk, 1.0)
+    assert set(fixed_half_life(walk, 1.0, keep_spread=False)) == {"kappa"}
+
+
+def test_a_fit_with_a_fixed_half_life_holds_it():
+    p = Params(spec=ModelSpec(factors=2, harmonics=0), mu=0.0, kappa=[60.0, 1.0], sigma=[[1.5, 0.4]], rho=0.0,
+               seasonal=[], beta=np.zeros((1, 0)), sigma_obs=0.02)
+    y = synthetic(p, 1500, seed=3)
+    r = fit(p.spec, y, np.arange(y.size), fixed=fixed_half_life(p, 2.0), starts=2)
+    assert np.isclose(r.params.half_life_days()[1], 2.0 * 365.25)
+    sd = r.params.sigma[0, 1] / np.sqrt(2 * r.params.kappa[1])
+    assert np.isclose(sd, 0.4 / np.sqrt(2 * 1.0))
+
+
+def test_likelihood_ratio_against_chi_squared():
+    stat, p = likelihood_ratio(100.0, 99.0)
+    assert stat == 2.0 and p == pytest.approx(0.1573, abs=1e-4) and p > 0.05      # 2 < 3.84: no evidence
+    stat, p = likelihood_ratio(100.0, 97.0)
+    assert stat == 6.0 and p == pytest.approx(0.01431, abs=1e-5) and p < 0.05     # 6 > 3.84: the restriction fails
+    assert likelihood_ratio(100.0, 96.0, df=4)[1] == pytest.approx(0.0916, abs=1e-4)
+    assert likelihood_ratio(100.0, 100.5)[1] == 1.0                     # the restricted fit came out better
+    with pytest.raises(ValueError):
+        likelihood_ratio(1.0, 0.0, df=0)

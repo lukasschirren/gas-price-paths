@@ -31,7 +31,7 @@ factor mean-reverting too. A reversion speed of zero for the slow factor gives t
 | Data | none tracked; the library reads and writes no files, and callers pass arrays and frames |
 | Branches | `main` until v0.1.0; after that, short feature branches merged into tagged releases, never a long-lived branch for one user |
 | Versions | semantic versions as git tags, an entry in `CHANGELOG.md` for each, citation metadata in `CITATION.cff` |
-| Scope of v0.1.0 | what gb-power-model needs (sections 3-5); calibration on futures curves, jumps and estimated regime switching wait on the roadmap (section 8) |
+| Scope of v0.1.0 | what gb-power-model needs (sections 3-5), with the general pieces it first kept in its own code (the volatility rule for a stressed regime, the likelihood ratio of nested fits, a fixed half-life with the long-run spread kept, the variogram; moved here on 5 Nov 2026), so that a user can date the regimes the model takes and repeat its checks; calibration on futures curves, jumps and estimated regime switching wait on the roadmap (section 8) |
 
 ## 3. The model
 
@@ -48,7 +48,8 @@ Cov(eta[i, t], eta[j, t]) = rho_ij sigma[i, r_t] sigma[j, r_t] (1 - phi_i phi_j)
 The step dt is one day in years (1/365.25), so a reversion speed kappa is per year and a factor's half-life is
 ln 2 / kappa. A speed of zero makes the factor a random walk, whose shock covariance is the limit rho sigma sigma dt.
 The caller gives the regime of every day, so regimes are dated and not estimated, and the day entered sets the shock
-of the step into it. A regime sets the shock sizes sigma
+of the step into it. `regimes.stressed_days` dates a stressed regime by a rule on the series' volatility
+(`docs/method.md`, dating a stressed regime). A regime sets the shock sizes sigma
 and the driver weights beta, and in simulation it may also move a factor's target theta, which is zero in fitting.
 Reversion speeds and correlations are shared by all regimes. The factors are ordered from fast to slow, which fixes
 their labels. The drivers enter the observation as written, or, with `drivers_enter="fast"`, the fast factor's
@@ -66,8 +67,10 @@ shock covariance is singular.
 | `ou.py` | the exact one-day transition per regime, the stationary covariance, and the conditional mean and covariance h days ahead |
 | `kalman.py` | the Kalman filter, its Gaussian log-likelihood, the filtered states and covariances, and the state on the last day; a missing day only predicts |
 | `fit.py` | maximum likelihood on transformed parameters (logs for speeds and shock sizes, tanh for a correlation, ordered speeds) by L-BFGS-B from several starts, fixed parameters, standard errors,
-the correlation fixed at zero by default |
+the correlation fixed at zero by default; the entries that fix a half-life and keep the long-run spread, and the likelihood ratio of nested fits |
 | `simulate.py` | seeded paths from a given state or the stationary distribution, with a regime and drivers per day; offsets that anchor paths to a level curve; annual means |
+| `regimes.py` | a stressed regime dated by the rolling volatility of daily log changes, its episodes and their windows |
+| `diagnostics.py` | the variogram of a series or a simulated path |
 
 The interface sketch below shows the intended calls, whose names the implementation plan may change.
 
@@ -121,14 +124,17 @@ The filter loops over days with explicit small-matrix arithmetic in numpy, and s
 | the filter | `test_kalman.py` checks that one factor gives the exact AR(1) likelihood, and covers missing days, regimes, drivers and a comparison with statsmodels when it is installed |
 | fitting | `test_fit.py` recovers known parameters of synthetic two-factor data within stated tolerances, keeps fixed parameters fixed, and shows that fits at two fixed correlations reach the same optimum |
 | simulation | `test_simulate.py` checks that anchoring hits its target, that a start away from the target reverts at the slow factor's rate, and that a regime moves the target |
+| regimes | `test_regimes.py` drops short runs, merges close ones at the exact gap, finds a known volatile spell and none in a calm series |
+| diagnostics | `test_diagnostics.py` checks the variogram against a random walk's square root and one factor's closed form |
 
 ## 7. Layout
 
 ```text
 gas-price-paths/
   README.md  CLAUDE.md  LICENSE  CHANGELOG.md  CITATION.cff  pyproject.toml  environment.yml
-  src/gaspaths/  __init__.py  model.py  ou.py  kalman.py  fit.py  simulate.py
+  src/gaspaths/  __init__.py  model.py  ou.py  kalman.py  fit.py  simulate.py  regimes.py  diagnostics.py
   tests/         test_imports.py  test_repo_hygiene.py  test_ou.py  test_kalman.py  test_fit.py  test_simulate.py
+                 test_regimes.py  test_diagnostics.py
   docs/          design.md (this note)  method.md (the maths, with references)
   examples/      fit_daily_series.py (a daily price series from a CSV the user names)
 ```

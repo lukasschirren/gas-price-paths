@@ -26,7 +26,3 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-The licence covers the code. The data the model reads keeps the terms of its sources (see
-data/inputs/MANIFEST.json and data/reference/README.md); licensed market data (Nord Pool N2EX,
-EPEX SPOT) is never distributed with this repository.

@@ -11,7 +11,7 @@ The package was written for the projection of gb-power-model, a merit-order mode
 where it gives the Monte Carlo its annual gas prices and the merit order its daily gas shapes. It knows nothing about
 GB; it fits any daily price series a caller passes.
 
-Status: pre-release (0.1.0.dev0). The interface may change until v0.1.0.
+Status: v0.1.0, the first release (`CHANGELOG.md`).
 
 ## Install
 
@@ -38,6 +38,19 @@ x = gp.simulate_factors(res.params, n_days=3650, n=20_000, rng=np.random.default
 dev = gp.log_deviation(res.params, t_days[-1] + 1 + np.arange(3650), x)   # log price less the level, by path and day
 ```
 
+With a stressed regime dated from the series' own volatility, and a sensitivity on the slow half-life:
+
+```python
+import pandas as pd
+
+logp = pd.Series(y, index=dates)                 # daily log prices on a date index, NaN on missing days
+stressed = gp.stressed_days(logp)                # True on the days of stressed episodes
+print(gp.windows(stressed))                      # their first and last days
+spec = gp.ModelSpec(factors=2, harmonics=2, regimes=("normal", "stressed"))
+res = gp.fit(spec, y, t_days, regime=stressed.astype(int).to_numpy())
+slow4 = gp.fit(spec, y, t_days, regime=stressed.astype(int).to_numpy(), fixed=gp.fixed_half_life(res.params, 4.0))
+```
+
 `examples/fit_daily_series.py` fits a series read from a CSV file the user names.
 
 ## The model
@@ -47,6 +60,12 @@ measurement noise. The drivers may instead enter the fast factor, so that a day'
 after the day and its effect fades at the factor's speed. Each factor reverts to its target at its own speed and steps from day to day by its exact
 transition, so no discretisation error enters. `docs/method.md` sets out the equations, the filter, the estimation
 and the anchoring of paths to a level curve; `docs/design.md` records the design decisions.
+
+Regimes are dated, not estimated. `stressed_days` dates a stressed regime by a rule on the series itself: a day is
+stressed when the month-long rolling volatility of daily log changes exceeds a multiple of its median, kept in
+episodes of a minimum length and merged across short calm gaps. `likelihood_ratio` compares nested fits (two regimes
+sharing a shock size, for instance), `fixed_half_life` holds a poorly identified slow speed for a sensitivity, and
+`variogram` compares how far a series and simulated paths move over every horizon from a day to years.
 
 ## Roadmap
 

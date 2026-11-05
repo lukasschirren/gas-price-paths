@@ -41,8 +41,10 @@ short feature branches merged into tagged releases; no branch is kept for one us
 | `src/gaspaths/model.py` | `ModelSpec` and `Params`: factors, harmonics, regimes, drivers, fixed parameters; a plain-dict round trip |
 | `src/gaspaths/ou.py` | the exact one-day transition, the stationary covariance, moments h days ahead |
 | `src/gaspaths/kalman.py` | `kalman_filter`: log-likelihood, filtered states, the state on the last day |
-| `src/gaspaths/fit.py` | `fit`: maximum likelihood, standard errors, the correlation fixed at zero (a spot series cannot identify it) |
+| `src/gaspaths/fit.py` | `fit`: maximum likelihood, standard errors, the correlation fixed at zero (a spot series cannot identify it); `fixed_half_life`, `likelihood_ratio` |
 | `src/gaspaths/simulate.py` | seeded factor paths, the log deviation, anchoring offsets, annual means |
+| `src/gaspaths/regimes.py` | `stressed_days`: a stressed regime dated by rolling volatility; `episodes`, `windows` |
+| `src/gaspaths/diagnostics.py` | `variogram` |
 | `tests/` | the rules above and the numerics, synthetic data only |
 | `docs/` | `design.md`, `method.md` |
 | `examples/` | `fit_daily_series.py` |

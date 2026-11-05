@@ -7,7 +7,8 @@ THE MODEL (docs/method.md). The log price of day t is
 
 with one or two mean-reverting factors x (ordered from fast to slow), each reverting to its target theta[r_t, j] at
 its speed kappa[j] per year with shocks of size sigma[r_t, j] per square-root year, the two shocks correlated by rho.
-The regime r_t of each day is given by the caller (dated, not estimated); a regime sets the shock sizes, the driver
+The regime r_t of each day is given by the caller (dated, not estimated; regimes.stressed_days dates a stressed
+regime by a rule on the series' volatility); a regime sets the shock sizes, the driver
 weights beta and the targets, while speeds and the correlation are shared by every regime. A speed of zero (allowed
 for the slowest factor) makes that factor a random walk, as in Schwartz and Smith (2000). t counts days, so the
 seasonal curve keeps its phase across years.

@@ -9,7 +9,16 @@ themselves. A factor named in spec.shared_sigma has one shock size for every reg
 (zero unless the caller passes them).
 
 FIXED PARAMETERS. fixed maps a parameter name to its value; arrays take NaN (or None) for the entries left free, so
-{"kappa": [nan, 1.0]} fixes the slow speed at 1.0 per year and fits the fast one.
+{"kappa": [nan, 1.0]} fixes the slow speed at 1.0 per year and fits the fast one. fixed_half_life builds the entries
+that hold one factor's half-life at a value and keep its long-run spread at a fit's, the sensitivity a poorly
+identified slow speed calls for.
+
+NESTED FITS. likelihood_ratio compares a fit with a restricted one nested in it, two regimes sharing a shock size for
+instance: the statistic 2 (l_full - l_restricted) and its p-value against chi-squared with as many degrees of
+freedom as the restriction removes (Wilks, 1938). The chi-squared reference holds for restrictions inside the
+parameter space. For a parameter held on its boundary, a shock size at zero, it is conservative (Self and Liang,
+1987), and for a restriction that leaves a parameter unidentified, a factor removed with its speed, it is only a
+guide.
 
 ESTIMATION. L-BFGS-B minimises the negative log-likelihood of kalman.loglik from several starts: the caller's start
 where given (a Params of the same spec, a related fit's for instance), a grid of speed pairs (fast, slow), each with
@@ -35,7 +44,7 @@ import math
 from dataclasses import dataclass
 
 import numpy as np
-from scipy import optimize
+from scipy import optimize, stats
 
 from gaspaths.kalman import loglik, prepare
 from gaspaths.model import ModelSpec, Params
@@ -336,3 +345,38 @@ def fit(spec: ModelSpec, y, t_days, regime=None, drivers=None, fixed: dict | Non
     return FitResult(params=packer.unpack(best.x), se=_standard_errors(packer, f, best.x), loglik=-float(best.fun),
                      n_obs=int(np.isfinite(y_).sum()), n_params=packer.size, converged=bool(best.success),
                      message=str(best.message))
+
+
+def fixed_half_life(params: Params, half_life_years: float, factor: int | None = None,
+                    keep_spread: bool = True) -> dict:
+    """The fixed entries (FIXED PARAMETERS) that hold one factor's half-life at half_life_years, the slowest factor
+    unless factor names another, and with keep_spread its shock size in each regime so that its long-run spread
+    sigma / sqrt(2 kappa) stays at params'. Every other parameter stays free. Pass the result as fit's fixed."""
+    spec = params.spec
+    j = spec.factors - 1 if factor is None else int(factor)
+    if not 0 <= j < spec.factors:
+        raise ValueError(f"factor {factor} of a {spec.factors}-factor model")
+    if not half_life_years > 0:
+        raise ValueError(f"a half-life is positive, not {half_life_years}")
+    k = np.log(2.0) / half_life_years
+    kappa = [np.nan] * spec.factors
+    kappa[j] = k
+    out = {"kappa": kappa}
+    if keep_spread:
+        if not params.kappa[j] > 0:
+            raise ValueError("a random-walk factor has no long-run spread to keep; pass keep_spread=False")
+        sd = params.sigma[:, j] / np.sqrt(2.0 * params.kappa[j])
+        sigma = [[np.nan] * spec.factors for _ in sd]
+        for g, v in enumerate(sd):
+            sigma[g][j] = float(v * np.sqrt(2.0 * k))
+        out["sigma"] = sigma
+    return out
+
+
+def likelihood_ratio(loglik_full: float, loglik_restricted: float, df: int = 1) -> tuple[float, float]:
+    """The likelihood-ratio statistic 2 (loglik_full - loglik_restricted) of a restricted fit nested in a fuller
+    one, and its p-value against chi-squared with df degrees of freedom (NESTED FITS)."""
+    if df < 1:
+        raise ValueError(f"a restriction removes at least one parameter, not {df}")
+    stat = 2.0 * (loglik_full - loglik_restricted)
+    return float(stat), float(stats.chi2.sf(stat, df))
