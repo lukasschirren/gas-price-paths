@@ -1,0 +1,17 @@
+# Conda environment for gas-price-paths.
+#   conda env create -f environment.yml      # run from the repo root
+#   conda activate gas-price-paths
+# Keep in step with pyproject.toml, which is the dependency list for plain pip installs.
+name: gas-price-paths
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - numpy>=1.24
+  - scipy>=1.10
+  - pandas>=2.0
+  - pytest>=7.4        # [dev]
+  - statsmodels>=0.14  # [dev]
+  - pip
+  - pip:
+      - -e .

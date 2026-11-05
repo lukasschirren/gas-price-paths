@@ -1,0 +1,46 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "gas-price-paths: one- and two-factor mean-reverting models of daily gas prices"
+type: software
+authors:
+  - family-names: Schirren
+    given-names: Lukas
+    affiliation: Imperial College London
+    email: lukas.schirren@imperial.ac.uk
+version: 0.1.0.dev0
+license: BSD-3-Clause
+repository-code: "https://github.com/lukasschirren/gas-price-paths"
+keywords:
+  - natural gas
+  - commodity prices
+  - Ornstein-Uhlenbeck
+  - Schwartz-Smith
+  - Kalman filter
+  - Monte Carlo
+references:
+  - type: article
+    authors:
+      - family-names: Schwartz
+        given-names: Eduardo S.
+    title: "The stochastic behavior of commodity prices: implications for valuation and hedging"
+    journal: "The Journal of Finance"
+    volume: 52
+    issue: 3
+    start: 923
+    end: 973
+    year: 1997
+    doi: 10.1111/j.1540-6261.1997.tb02721.x
+  - type: article
+    authors:
+      - family-names: Schwartz
+        given-names: Eduardo
+      - family-names: Smith
+        given-names: James E.
+    title: "Short-term variations and long-term dynamics in commodity prices"
+    journal: "Management Science"
+    volume: 46
+    issue: 7
+    start: 893
+    end: 911
+    year: 2000
+    doi: 10.1287/mnsc.46.7.893.12034

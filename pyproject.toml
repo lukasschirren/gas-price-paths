@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=77"]   # SPDX `license` string (PEP 639)
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gas-price-paths"
+dynamic = ["version"]
+description = "One- and two-factor mean-reverting models of daily gas prices, with Kalman-filter calibration and seeded path simulation"
+readme = "README.md"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+requires-python = ">=3.12"
+authors = [{ name = "Lukas Schirren", email = "lukas.schirren@imperial.ac.uk" }]
+keywords = ["natural gas", "commodity prices", "Ornstein-Uhlenbeck", "Vasicek", "Schwartz-Smith", "Kalman filter",
+            "Monte Carlo", "energy"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "pandas>=2.0",
+]
+
+[project.optional-dependencies]
+# statsmodels only for the development check of the filter against an independent state-space implementation
+dev = ["pytest>=7.4", "statsmodels>=0.14"]
+
+[project.urls]
+Repository = "https://github.com/lukasschirren/gas-price-paths"
+
+[tool.setuptools.dynamic]
+version = { attr = "gaspaths.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]   # tests run from a fresh clone without `pip install -e .`

@@ -1,0 +1,30 @@
+# ---- data: the library tracks none; callers pass arrays and frames (tests/test_repo_hygiene.py) ----
+*.csv
+*.parquet
+*.xlsx
+*.xls
+*.feather
+*.h5
+*.nc
+!tests/fixtures/*.csv
+
+# ---- licensed market data and credentials, wherever they land ----
+**/*nordpool*
+**/*n2ex*
+**/*N2EX*
+**/*epex*
+**/*EPEX*
+**/*dayahead*
+*token*.txt
+*credential*.txt
+
+# ---- build and tooling ----
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+.ipynb_checkpoints/
+.vscode/
+.idea/
